@@ -143,6 +143,56 @@
     margin-top:1px;
     line-height:1.4;
   }
+  .info-wrap{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    cursor:help;
+    vertical-align:middle;
+  }
+  .info-icon{
+    width:14px;height:14px;
+    border-radius:50%;
+    background:var(--panel-2);
+    border:1px solid var(--text-soft);
+    color:var(--text-soft);
+    font-size:0.62rem;
+    font-family:var(--mono);
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    margin-left:5px;
+    flex-shrink:0;
+  }
+  .info-wrap:hover .info-icon{
+    border-color:var(--amber);
+    color:var(--amber);
+  }
+  .info-tooltip{
+    visibility:hidden;
+    opacity:0;
+    position:absolute;
+    bottom:135%;
+    left:0;
+    width:250px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:var(--sans);
+    font-weight:400;
+    font-size:0.72rem;
+    line-height:1.45;
+    padding:9px 11px;
+    border-radius:6px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.45);
+    z-index:20;
+    transition:opacity 0.12s ease;
+    pointer-events:none;
+  }
+  .info-wrap:hover .info-tooltip{
+    visibility:visible;
+    opacity:1;
+  }
   .result{
     margin-top:24px;
     border:1px solid var(--amber);
@@ -271,6 +321,7 @@
       padding: 3px 5px;
     }
     .hint{ display: none; } /* skip instructional text on a printed record */
+    .info-wrap{ display: none; }
     .result{
       border-color: #000;
       box-shadow: none;
@@ -345,14 +396,12 @@
         </select>
       </div>
       <div class="field">
-        <label for="saledate">Processing date (est.)</label>
+        <label for="saledate">Processing date (est.)<span class="info-wrap"><span class="info-icon">i</span><span class="info-tooltip">Use the date this will actually be FILED with the state — not the sale date. Confirmed on a real deal: sold 8/6, filed by Sunstate 9/2 (27-day gap), and the state's proration matched the filing date, not the sale date. If you don't know the exact filing date yet, estimate based on Sunstate's typical turnaround.</span></span></label>
         <input type="date" id="saledate">
-        <div class="hint">Use the date this will actually be FILED with the state — not the sale date. Confirmed on a real deal: sold 8/6, filed by Sunstate 9/2 (27-day gap), and the state's proration matched the filing date, not the sale date. If you don't know the exact filing date yet, estimate based on Sunstate's typical turnaround.</div>
       </div>
       <div class="field" id="bdayfield">
-        <label for="bday">Owner birthday (month/day)</label>
+        <label for="bday">Owner birthday (month/day)<span class="info-wrap"><span class="info-icon">i</span><span class="info-tooltip">Only matters for individual owners. Business-owned light vehicles expire June 30; business-owned heavy trucks 8,000+ lbs (or 5,001&ndash;7,999 lbs) expire Dec 31 &mdash; no birthday needed either way.</span></span></label>
         <input type="date" id="bday">
-        <div class="hint">Only matters for individual owners. Business-owned light vehicles expire June 30; business-owned heavy trucks 8,000+ lbs (or 5,001&ndash;7,999 lbs) expire Dec 31 &mdash; no birthday needed either way.</div>
       </div>
     </div>
   </fieldset>
@@ -429,14 +478,12 @@
     </div>
     <div class="row">
       <div class="field">
-        <label for="miscfee">Misc. stacked state fees</label>
+        <label for="miscfee">Misc. stacked state fees<span class="info-wrap"><span class="info-icon">i</span><span class="info-tooltip">HEAVY VEHICLES ONLY. Auto-fills to the confirmed real value for the 8,000–9,999 ($9.10, from a real 8,600 GVW deal) and 10,000–14,999 ($21.60, from two real deals in that bracket) GVW brackets. For LIGHT vehicles this is ignored entirely — the small program fees are already bundled into the confirmed weight-tier rate, not a separate charge (per FHWA's historical breakdown of FL's fee structure).</span></span></label>
         <input type="number" id="miscfee" step="0.01" placeholder="auto-fills once GVW is entered">
-        <div class="hint">HEAVY VEHICLES ONLY. Auto-fills to the confirmed real value for the 8,000–9,999 ($9.10, from a real 8,600 GVW deal) and 10,000–14,999 ($21.60, from two real deals in that bracket) GVW brackets. For LIGHT vehicles this is ignored entirely — the small program fees are already bundled into the confirmed weight-tier rate, not a separate charge (per FHWA's historical breakdown of FL's fee structure).</div>
       </div>
       <div class="field">
-        <label for="countyfee">County fee</label>
+        <label for="countyfee">County fee<span class="info-wrap"><span class="info-icon">i</span><span class="info-tooltip">Confirmed flat $3.00 on every real registration document seen so far, regardless of scenario or weight class.</span></span></label>
         <input type="number" id="countyfee" step="0.01" value="3.00">
-        <div class="hint">Confirmed flat $3.00 on every real registration document seen so far, regardless of scenario or weight class.</div>
       </div>
     </div>
   </fieldset>
@@ -869,6 +916,18 @@ $('gvw').addEventListener('input', () => {
       if(el) el.checked = (v === '1' || v === 'true' || v === 'yes' || v === 'on');
     }
   });
+
+  // Setting .value in code doesn't fire the 'input' event, so the GVW ->
+  // misc fee auto-lookup (normally triggered by typing) never runs on its
+  // own here. Redo it explicitly, unless the URL already passed its own
+  // miscfee value directly (respect that override instead).
+  if(params.has('gvw') && !params.has('miscfee')){
+    const gvwVal = parseFloat($('gvw').value);
+    if(!isNaN(gvwVal)){
+      const confirmed = miscFeeForGvw(gvwVal);
+      if(confirmed != null){ $('miscfee').value = confirmed.toFixed(2); }
+    }
+  }
 })();
 
 // default sale date to today, only if nothing came in from the URL
